@@ -1,5 +1,5 @@
 export interface Passage {
-  id?: string;
+  // id?: string;
   book: string;
   chapter: number;
   startVerse: number;

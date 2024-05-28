@@ -8,15 +8,18 @@ export class ScriptureController {
   @Get()
   getScripture(
     @Query('book') book: string,
-    @Query('chapter') chapter: number,
-    @Query('startVerse') startVerse: number,
-    @Query('endVerse') endVerse: number,
+    @Query('chapter') chapter: string,
+    @Query('startVerse') startVerse: string,
+    @Query('endVerse') endVerse: string,
   ) {
+    const chapterNumber = parseInt(chapter, 10);
+    const startVerseNumber = parseInt(startVerse, 10);
+    const endVerseNumber = parseInt(endVerse, 10);
     return this.scriptureService.getScripture(
       book,
-      chapter,
-      startVerse,
-      endVerse,
+      chapterNumber,
+      startVerseNumber,
+      endVerseNumber,
     );
   }
 }
