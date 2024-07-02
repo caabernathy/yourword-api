@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
+import { firstValueFrom } from 'rxjs';
+import { bookIdMap } from './constants/book-id-map';
 import { ScriptureClass } from './models/scripture.class';
 import { PassageClass } from './models/passage.class';
 import { TranslationClass } from './models/translation.class';
@@ -6,33 +10,105 @@ import { BibleVersion } from './models/bible-version.enum';
 
 @Injectable()
 export class ScriptureService {
-  getScripture(
+  private readonly logger = new Logger(ScriptureService.name);
+  private readonly apiUrl = 'https://bolls.life/get-verses/';
+  private readonly bibleVersions: BibleVersion[] = [
+    BibleVersion.NIV,
+    BibleVersion.ESV,
+    BibleVersion.NLT,
+    BibleVersion.KJV,
+  ];
+
+  constructor(
+    private httpService: HttpService,
+    private configService: ConfigService,
+  ) {}
+
+  async getScripture(
     book: string,
     chapter: number,
     startVerse: number,
     endVerse: number,
-  ): ScriptureClass {
-    const passage = new PassageClass(book, chapter, startVerse, endVerse);
-    const translations = [
-      new TranslationClass(
-        BibleVersion.NIV,
-        'But if serving the Lord seems undesirable to you, then choose for yourselves this day whom you will serve, whether the gods your ancestors served beyond the Euphrates, or the gods of the Amorites, in whose land you are living. But as for me and my household, we will serve the LORD.',
-      ),
-      new TranslationClass(
-        BibleVersion.ESV,
-        'And if it is evil in your eyes to serve the Lord, choose this day whom you will serve, whether the gods your fathers served in the region beyond the River, or the gods of the Amorites in whose land you dwell. But as for me and my house, we will serve the LORD.',
-      ),
-      new TranslationClass(
-        BibleVersion.NLT,
-        'But if you refuse to serve the Lord, then choose today whom you will serve. Would you prefer the gods your ancestors served beyond the Euphrates? Or will it be the gods of the Amorites in whose land you now live? But as for me and my family, we will serve the LORD.',
-      ),
-      new TranslationClass(
-        BibleVersion.KJV,
-        'And if it seem evil unto you to serve the Lord, choose you this day whom ye will serve; whether the gods which your fathers served that were on the other side of the flood, or the gods of the Amorites, in whose land ye dwell: but as for me and my house, we will serve the LORD.',
-      ),
-    ];
-    const scripture = new ScriptureClass(passage, translations);
+  ): Promise<ScriptureClass> {
+    const bookId = bookIdMap[book];
+    if (!bookId) {
+      throw new Error('Invalid book name');
+    }
 
+    const verses = Array.from(
+      { length: endVerse - startVerse + 1 },
+      (_, i) => startVerse + i,
+    );
+
+    const requestBody = this.bibleVersions.map((translation) => ({
+      translation,
+      book: bookId,
+      chapter,
+      verses,
+    }));
+
+    try {
+      const { data } = await firstValueFrom(
+        this.httpService.post(this.apiUrl, requestBody),
+      );
+      return this.formatResponse(book, chapter, startVerse, endVerse, data);
+    } catch (error) {
+      this.logger.error(
+        `Failed to fetch scripture: ${error.message}`,
+        error.stack,
+      );
+      throw new HttpException(
+        'Failed to fetch scripture',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  private formatResponse(
+    book: string,
+    chapter: number,
+    startVerse: number,
+    endVerse: number,
+    apiResponse: any[],
+  ): ScriptureClass {
+    if (!Array.isArray(apiResponse)) {
+      this.logger.error('Unexpected API response format', apiResponse);
+      throw new HttpException(
+        'Unexpected API response format',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    const translations: TranslationClass[] = this.bibleVersions.map(
+      (version) => {
+        const translationData = apiResponse.find(
+          (r) => r[0] && r[0].translation === version,
+        );
+        if (
+          !translationData ||
+          !Array.isArray(translationData) ||
+          translationData.length === 0
+        ) {
+          this.logger.warn(
+            `Missing or invalid translation data for ${version}`,
+          );
+          return { name: version, text: 'Translation not available' };
+        }
+        const text = this.stripHtmlTags(
+          translationData.map((v) => v.text).join(' '),
+        );
+        const translation = new TranslationClass(version, text);
+        return translation;
+      },
+    );
+    const passage = new PassageClass(book, chapter, startVerse, endVerse);
+    const scripture = new ScriptureClass(passage, translations);
     return scripture;
+  }
+
+  private stripHtmlTags(text: string): string {
+    return text
+      .replace(/<\/?[^>]+(>|$)/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 }

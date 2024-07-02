@@ -20,23 +20,4 @@ export class PassageClass implements Passage {
     this.startVerse = startVerse;
     this.endVerse = endVerse;
   }
-
-  // static fromJSON(json: any): PassageClass {
-  //   return new PassageClass(
-  //     json.book,
-  //     json.chapter,
-  //     json.startVerse,
-  //     json.endVerse,
-  //   );
-  // }
-
-  // toJSON(): any {
-  //   return {
-  //     // id: this.id,
-  //     book: this.book,
-  //     chapter: this.chapter,
-  //     startVerse: this.startVerse,
-  //     endVerse: this.endVerse,
-  //   };
-  // }
 }

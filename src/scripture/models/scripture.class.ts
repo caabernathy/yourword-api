@@ -15,23 +15,4 @@ export class ScriptureClass implements Scripture {
     this.passage = passage;
     this.translations = translations;
   }
-
-  // static fromJSON(json: any): ScriptureClass {
-  //   const passage = PassageClass.fromJSON(json.passage);
-  //   const translations = json.translations.map((translation: any) =>
-  //     TranslationClass.fromJSON(translation),
-  //   );
-  //   return new ScriptureClass(passage, translations);
-  // }
-
-  // toJSON(): any {
-  //   return {
-  //     // id: this.id,
-  //     // createdAt: this.createdAt,
-  //     passage: this.passage.toJSON(),
-  //     translations: this.translations.map((translation) =>
-  //       translation.toJSON(),
-  //     ),
-  //   };
-  // }
 }

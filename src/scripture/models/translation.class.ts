@@ -9,15 +9,4 @@ export class TranslationClass implements Translation {
     this.name = name;
     this.text = text;
   }
-
-  static fromJSON(json: any): TranslationClass {
-    return new TranslationClass(json.name, json.text);
-  }
-
-  toJSON(): any {
-    return {
-      name: this.name,
-      text: this.text,
-    };
-  }
 }
