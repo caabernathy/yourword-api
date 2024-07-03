@@ -3,10 +3,11 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { bookIdMap } from './constants/book-id-map';
-import { ScriptureClass } from './models/scripture.class';
-import { PassageClass } from './models/passage.class';
-import { TranslationClass } from './models/translation.class';
-import { BibleVersion } from './models/bible-version.enum';
+import {
+  ScriptureResponse,
+  Translation,
+} from './interfaces/scripture.interface';
+import { BibleVersion } from './enums/bible-version.enum';
 
 @Injectable()
 export class ScriptureService {
@@ -29,10 +30,10 @@ export class ScriptureService {
     chapter: number,
     startVerse: number,
     endVerse: number,
-  ): Promise<ScriptureClass> {
+  ): Promise<ScriptureResponse> {
     const bookId = bookIdMap[book];
     if (!bookId) {
-      throw new Error('Invalid book name');
+      throw new HttpException('Invalid book name', HttpStatus.BAD_REQUEST);
     }
 
     const verses = Array.from(
@@ -70,7 +71,7 @@ export class ScriptureService {
     startVerse: number,
     endVerse: number,
     apiResponse: any[],
-  ): ScriptureClass {
+  ): ScriptureResponse {
     if (!Array.isArray(apiResponse)) {
       this.logger.error('Unexpected API response format', apiResponse);
       throw new HttpException(
@@ -78,31 +79,27 @@ export class ScriptureService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-    const translations: TranslationClass[] = this.bibleVersions.map(
-      (version) => {
-        const translationData = apiResponse.find(
-          (r) => r[0] && r[0].translation === version,
-        );
-        if (
-          !translationData ||
-          !Array.isArray(translationData) ||
-          translationData.length === 0
-        ) {
-          this.logger.warn(
-            `Missing or invalid translation data for ${version}`,
-          );
-          return { name: version, text: 'Translation not available' };
-        }
-        const text = this.stripHtmlTags(
-          translationData.map((v) => v.text).join(' '),
-        );
-        const translation = new TranslationClass(version, text);
-        return translation;
-      },
-    );
-    const passage = new PassageClass(book, chapter, startVerse, endVerse);
-    const scripture = new ScriptureClass(passage, translations);
-    return scripture;
+    const translations: Translation[] = this.bibleVersions.map((version) => {
+      const translationData = apiResponse.find(
+        (r) => r[0] && r[0].translation === version,
+      );
+      if (
+        !translationData ||
+        !Array.isArray(translationData) ||
+        translationData.length === 0
+      ) {
+        this.logger.warn(`Missing or invalid translation data for ${version}`);
+        return { name: version, text: 'Translation not available' };
+      }
+      const text = this.stripHtmlTags(
+        translationData.map((v) => v.text).join(' '),
+      );
+      return { name: version, text };
+    });
+    return {
+      passage: { book, chapter, startVerse, endVerse },
+      translations,
+    };
   }
 
   private stripHtmlTags(text: string): string {
