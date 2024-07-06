@@ -1,0 +1,22 @@
+# Copyright (c) Christine Abernathy.
+# 
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
+app = 'yourword-api'
+primary_region = 'atl'
+
+[build]
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
