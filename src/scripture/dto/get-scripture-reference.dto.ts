@@ -8,7 +8,7 @@
 import { IsString, IsInt, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export class GetScriptureDto {
+export class GetScriptureReferenceDto {
   @IsString()
   book: string;
 

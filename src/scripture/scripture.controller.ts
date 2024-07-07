@@ -13,23 +13,23 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { ScriptureService } from './scripture.service';
-import { GetScriptureDto } from './dto/get-scripture.dto';
+import { GetScriptureReferenceDto } from './dto/get-scripture-reference.dto';
 import { ScriptureResponse } from './interfaces/scripture.interface';
 
 @Controller('scripture')
 export class ScriptureController {
   constructor(private scriptureService: ScriptureService) {}
 
-  @Get()
+  @Get('reference')
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
-  async getScripture(
-    @Query() getScriptureDto: GetScriptureDto,
+  async getScriptureByReference(
+    @Query() getScriptureReferenceDto: GetScriptureReferenceDto,
   ): Promise<ScriptureResponse> {
     return this.scriptureService.getScripture(
-      getScriptureDto.book,
-      getScriptureDto.chapter,
-      getScriptureDto.startVerse,
-      getScriptureDto.endVerse,
+      getScriptureReferenceDto.book,
+      getScriptureReferenceDto.chapter,
+      getScriptureReferenceDto.startVerse,
+      getScriptureReferenceDto.endVerse,
     );
   }
 }
