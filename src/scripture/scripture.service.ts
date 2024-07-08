@@ -99,7 +99,7 @@ export class ScriptureService {
         return { name: version, text: 'Translation not available' };
       }
       const text = this.stripHtmlTags(
-        translationData.map((v) => v.text).join(' '),
+        translationData.map((v) => this.stripTitle(v.text)).join(' '),
       );
       return { name: version, text };
     });
@@ -114,5 +114,10 @@ export class ScriptureService {
       .replace(/<\/?[^>]+(>|$)/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
+  }
+
+  // Some of the translations (NIV) have a title before the verse text.
+  private stripTitle(text: string): string {
+    return text.replace(/.*?<br\/>/, '');
   }
 }
