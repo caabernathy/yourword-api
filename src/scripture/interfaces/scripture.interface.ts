@@ -5,10 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { BibleVersion } from '../enums/bible-version.enum';
-
 export interface Translation {
-  name: BibleVersion;
+  name: string;
   text: string;
 }
 

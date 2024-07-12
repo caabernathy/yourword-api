@@ -9,7 +9,8 @@ import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
-import { bookIdMap } from './constants/book-id-map';
+import { bookMap } from './constants/book-map';
+import { bibleVersionDisplayMap } from './constants/bible-version-display-map';
 import {
   ScriptureResponse,
   Translation,
@@ -21,7 +22,7 @@ export class ScriptureService {
   private readonly logger = new Logger(ScriptureService.name);
   private readonly apiUrl = 'https://bolls.life/get-verses/';
   private readonly bibleVersions: BibleVersion[] = [
-    BibleVersion.NIV,
+    BibleVersion.NIV2011,
     BibleVersion.ESV,
     BibleVersion.NLT,
     BibleVersion.KJV,
@@ -38,7 +39,7 @@ export class ScriptureService {
     startVerse: number,
     endVerse: number,
   ): Promise<ScriptureResponse> {
-    const bookId = bookIdMap[book];
+    const bookId = bookMap[book].id;
     if (!bookId) {
       throw new HttpException('Invalid book name', HttpStatus.BAD_REQUEST);
     }
@@ -96,12 +97,15 @@ export class ScriptureService {
         translationData.length === 0
       ) {
         this.logger.warn(`Missing or invalid translation data for ${version}`);
-        return { name: version, text: 'Translation not available' };
+        return {
+          name: bibleVersionDisplayMap[version],
+          text: 'Translation not available',
+        };
       }
-      const text = this.stripHtmlTags(
-        translationData.map((v) => this.stripTitle(v.text)).join(' '),
+      const text = this.processText(
+        translationData.map((v) => v.text).join(' '),
       );
-      return { name: version, text };
+      return { name: bibleVersionDisplayMap[version], text };
     });
     return {
       passage: { book, chapter, startVerse, endVerse },
@@ -109,15 +113,17 @@ export class ScriptureService {
     };
   }
 
-  private stripHtmlTags(text: string): string {
-    return text
-      .replace(/<\/?[^>]+(>|$)/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
+  private processText(text: string): string {
+    // First, remove text within <b> tags along with the tags themselves
+    text = text.replace(/<b>.*?<\/b>/g, '');
 
-  // Some of the translations (NIV) have a title before the verse text.
-  private stripTitle(text: string): string {
-    return text.replace(/.*?<br\/>/, '');
+    // Next, replace <br/> and <br> with newlines
+    text = text.replace(/<br\s*\/?>/gi, '\n');
+
+    // Then, remove any remaining HTML tags
+    text = text.replace(/<\/?[^>]+(>|$)/g, ' ');
+
+    // Finally, trim any leading or trailing whitespace
+    return text.trim();
   }
 }

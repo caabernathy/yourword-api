@@ -6,6 +6,7 @@
  */
 
 export enum BibleVersion {
+  NIV2011 = 'NIV2011',
   NIV = 'NIV',
   ESV = 'ESV',
   NLT = 'NLT',
