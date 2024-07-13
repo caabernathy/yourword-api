@@ -20,7 +20,8 @@ import { BibleVersion } from './enums/bible-version.enum';
 @Injectable()
 export class ScriptureService {
   private readonly logger = new Logger(ScriptureService.name);
-  private readonly apiUrl = 'https://bolls.life/get-verses/';
+  private readonly versesApiUrl = 'https://bolls.life/get-verses/';
+  private readonly searchApiUrl = 'https://bolls.life/find/';
   private readonly bibleVersions: BibleVersion[] = [
     BibleVersion.NIV2011,
     BibleVersion.ESV,
@@ -58,7 +59,7 @@ export class ScriptureService {
 
     try {
       const { data } = await firstValueFrom(
-        this.httpService.post(this.apiUrl, requestBody),
+        this.httpService.post(this.versesApiUrl, requestBody),
       );
       return this.formatResponse(book, chapter, startVerse, endVerse, data);
     } catch (error) {
@@ -111,6 +112,65 @@ export class ScriptureService {
       passage: { book, chapter, startVerse, endVerse },
       translations,
     };
+  }
+
+  async searchScripture(
+    version: BibleVersion,
+    text: string,
+  ): Promise<ScriptureResponse[]> {
+    const apiVersion =
+      version === BibleVersion.NIV ? BibleVersion.NIV2011 : version;
+    const url = `${this.searchApiUrl}${apiVersion}/?search=${encodeURIComponent(text)}&match_case=false&match_whole=false`;
+
+    try {
+      const { data } = await firstValueFrom(this.httpService.get(url));
+      return this.formatSearchResponse(version, data);
+    } catch (error) {
+      this.logger.error(
+        `Failed to search scripture: ${error.message}`,
+        error.stack,
+      );
+      throw new HttpException(
+        'Failed to search scripture',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  private formatSearchResponse(
+    version: BibleVersion,
+    apiResponse: any[],
+  ): ScriptureResponse[] {
+    if (!Array.isArray(apiResponse)) {
+      this.logger.error('Unexpected API response format', apiResponse);
+      throw new HttpException(
+        'Unexpected API response format',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    return apiResponse.map((item) => ({
+      passage: {
+        book: this.getBookName(item.book),
+        chapter: item.chapter,
+        startVerse: item.verse,
+        endVerse: item.verse,
+      },
+      translations: [
+        {
+          name: bibleVersionDisplayMap[version],
+          text: this.processText(item.text),
+        },
+      ],
+    }));
+  }
+
+  private getBookName(bookId: number): string {
+    const bookEntry = Object.entries(bookMap).find(
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      ([_, value]) => value.id === bookId,
+    );
+    return bookEntry ? bookEntry[0] : 'Unknown Book';
   }
 
   private processText(text: string): string {
