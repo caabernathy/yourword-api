@@ -180,6 +180,9 @@ export class ScriptureService {
     // Next, replace <br/> and <br> with newlines
     text = text.replace(/<br\s*\/?>/gi, '\n');
 
+    // Then, remove Strong numbers
+    text = text.replace(/<S>\d+<\/S>/g, '');
+
     // Then, remove any remaining HTML tags
     text = text.replace(/<\/?[^>]+(>|$)/g, ' ');
 
